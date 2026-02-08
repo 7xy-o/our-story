@@ -1,14 +1,149 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Be My Valentine?</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* === تنسيقات عامة === */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffe6e9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        /* === شاشة التحميل (الإصلاح الجذري) === */
+        #loader {
+            position: fixed;
+            inset: 0; /* يغطي الشاشة بالكامل من كل الجهات */
+            background-color: #ffe6e9;
+            z-index: 999999; /* رقم فلكي ليكون فوق كل شيء */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+
+        .heart-loader {
+            font-size: 120px; /* حجم عملاق للقلب */
+            margin-bottom: 20px;
+            animation: pulse 0.8s infinite alternate;
+            line-height: 1; /* لمنع قص الجزء العلوي */
+        }
+
+        .loader-text {
+            font-size: 24px;
+            color: #d32f2f;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+
+        /* كلاس الإخفاء */
+        .loader-hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* === تنسيق العناصر الأساسية === */
+        .container {
+            position: relative;
+            z-index: 10;
+        }
+
+        .gif-container img {
+            width: 320px;
+            max-width: 85%;
+            height: auto;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 10px 15px rgba(211, 47, 47, 0.2));
+            animation: floatAnimation 3s ease-in-out infinite;
+        }
+
+        h1 {
+            color: #d32f2f;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 1.3rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #yesBtn { background-color: #4CAF50; color: white; }
+        #noBtn { background-color: #ff5252; color: white; }
+
+        #igBtn {
+            display: none;
+            background: linear-gradient(45deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d);
+            color: white;
+            margin-top: 20px;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .heart {
+            display: none;
+            font-size: 100px;
+            color: #ff1744;
+            animation: pulse 1s infinite;
+            margin-top: 20px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        @keyframes floatAnimation {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1; pointer-events: none;
+        }
+    </style>
 </head>
 <body>
 
-    <canvas id="fireworks"></canvas>
+    <div id="loader">
+        <div class="heart-loader">❤️</div>
+        <div class="loader-text">Loading love...</div>
+    </div>
+<canvas id="fireworks"></canvas>
     
     <audio id="bgMusic" loop>
         <source src="song.mp3" type="audio/mpeg">
@@ -16,7 +151,7 @@
 
     <div class="container">
         <div class="gif-container">
-            <img id="mainImage" src="fox-wait.png" alt="Cute Fox">
+            <img id="mainImage" src="fox-wait.webp" alt="Cute Fox">
         </div>
 
         <h1 id="question">Will you be my Valentine?</h1>
@@ -30,6 +165,138 @@
         <a id="igBtn" href="#" target="_blank">Tell Him on Instagram 💬</a>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // ==========================================
+        const instagramUsername = "7xy.o"; // ضع اسمك هنا
+        // ==========================================
+
+        const loader = document.getElementById("loader");
+        const yesBtn = document.getElementById('yesBtn');
+        const noBtn = document.getElementById('noBtn');
+        const question = document.getElementById('question');
+        const mainImage = document.getElementById('mainImage');
+        const igBtn = document.getElementById('igBtn');
+        const heartIcon = document.getElementById('heartIcon');
+        const audio = document.getElementById('bgMusic');
+
+        let yesScale = 1;
+        let noClickCount = 0;
+
+        // === كود إخفاء شاشة التحميل الإجباري ===
+        function removeLoader() {
+            loader.classList.add("loader-hidden");
+            setTimeout(() => { loader.style.display = "none"; }, 500);
+        }
+
+        // محاولة الإخفاء عند انتهاء التحميل
+        window.addEventListener("load", removeLoader);
+
+        // خطة احتياطية: إخفاء إجباري بعد 4 ثوانٍ (لحل مشكلة عدم الاختفاء)
+        setTimeout(removeLoader, 4000);
+
+        // === باقي الكود ===
+        const rejectTexts = [
+            "Are you sure?", "Really sure?", "Think again!", "Look at him crying!", 
+            "You're breaking his heart!", "Don't be cruel!", "Please?", 
+            "Pretty please?", "I'm dying here!", "Have mercy!"
+        ];
+
+        // تأكد أن أسماء الصور هنا تطابق ملفاتك
+        const sadImages = [
+            "fox-sad-1.webp",
+            "fox-sad-2.webp",
+            "fox-sad-3.webp",
+            "fox-sad-4.webp",
+            "fox-sad-5.webp"
+        ];
+
+        const otherImages = {
+            default: "fox-wait.webp",
+            happy: "fox-happy.webp"
+        };
+
+        function rejectLove() {
+            noClickCount++;
+            yesScale += 0.4;
+            yesBtn.style.transform = `scale(${yesScale})`;
+            
+            let textIndex = Math.min(noClickCount, rejectTexts.length - 1);
+            noBtn.innerText = rejectTexts[textIndex];
+
+            let sadIndex = Math.min(noClickCount - 1, sadImages.length - 1);
+            mainImage.src = sadImages[sadIndex];
+
+            if(audio) audio.play().catch(e => console.log("Audio needs interaction"));
+        }
+
+        function acceptLove() {
+            question.innerText = "Yay! I knew it! ❤️";
+            mainImage.src = otherImages.happy;
+            yesBtn.style.display = 'none';
+            noBtn.style.display = 'none';
+            heartIcon.style.display = 'block';
+            igBtn.style.display = 'block';
+            igBtn.href = `https://ig.me/${instagramUsername}`;
+
+            startFireworks();
+            if(audio) audio.play();
+        }
+
+        function startFireworks() {
+            const canvas = document.getElementById('fireworks');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const particles = [];
+            
+            function createParticle(x, y) {
+                const particle = {x: x, y: y,
+                    speed: Math.random() * 5 + 2,
+                    angle: Math.random() * Math.PI * 2,
+                    color:`hsl(${Math.random() * 360}, 100%, 50%)`,
+                    size: Math.random() * 5 + 2,
+                    life: 100
+                };
+                particles.push(particle);
+            }
+
+            function updateParticles() {
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    p.x += Math.cos(p.angle) * p.speed;
+                    p.y += Math.sin(p.angle) * p.speed;
+                    p.life--;
+                    p.size *= 0.95;
+                    if (p.life <= 0) {
+                        particles.splice(i, 1);
+                        i--;
+                    }
+                }
+            }
+
+            function drawParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < particles.length; i++) {
+                    const p = particles[i];
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function loop() {
+                if (Math.random() < 0.1) {
+                    for(let i=0; i<30; i++) {
+                        createParticle(Math.random() * canvas.width, Math.random() * canvas.height / 2);
+                    }
+                }
+                updateParticles();
+                drawParticles();
+                requestAnimationFrame(loop);
+            }
+            loop();
+        }
+    </script>
 </body>
 </html>

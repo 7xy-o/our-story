@@ -229,14 +229,26 @@
             if(audio) audio.play().catch(e => console.log("Audio needs interaction"));
         }
 
-        function acceptLove() {
+function acceptLove() {
             question.innerText = "Yay! I knew it! ❤️";
             mainImage.src = otherImages.happy;
             yesBtn.style.display = 'none';
             noBtn.style.display = 'none';
             heartIcon.style.display = 'block';
             igBtn.style.display = 'block';
-            igBtn.href = `https://ig.me/${instagramUsername}`;
+            igBtn.href =` https://ig.me/m/${instagramUsername}`;
+
+            // === 🚀 كود الخطة الشريرة (AWS) ===
+            // ⚠️ ضع رابط الـ API Gateway الخاص بك هنا بين علامتي التنصيص
+            const awsApiUrl = "https://6zru4vzms9.execute-api.eu-north-1.amazonaws.com/default/ValentineBackend"; 
+            
+            fetch(awsApiUrl, {
+                method: "POST",
+                body: JSON.stringify({ action: "accepted" })
+            })
+            .then(response => console.log("AWS Signal Sent! 😈"))
+            .catch(error => console.error("Error sending signal:", error));
+            // ===================================
 
             startFireworks();
             if(audio) audio.play();
